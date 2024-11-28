@@ -1,0 +1,96 @@
+pipeline {
+    agent any
+    tools {
+        jdk 'jdk17'
+        nodejs 'node16'
+    }
+    environment {
+        SCANNER_HOME = tool 'sonar-scanner'
+    }
+    stages {
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+        stage('Checkout from Git') {
+            steps {
+                git branch: env.BRANCH_NAME, url: 'https://github.com/Rimonshil/DevSecOps-Project.git'
+            }
+        }
+        stage('SonarQube Analysis') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'staging'
+                }
+            }
+            steps {
+                withSonarQubeEnv('sonar-server') {
+                    sh '''$SCANNER_HOME/bin/sonar-scanner \
+                    -Dsonar.projectName=Netflix-${BRANCH_NAME} \
+                    -Dsonar.projectKey=Netflix-${BRANCH_NAME}'''
+                }
+            }
+        }
+        stage('Quality Gate') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'staging'
+                }
+            }
+            steps {
+                script {
+                    waitForQualityGate abortPipeline: true, credentialsId: 'sonar-token'
+                }
+            }
+        }
+        stage('Install Dependencies') {
+            steps {
+                sh "npm install"
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    def imageTag = "netflix:${BRANCH_NAME}"
+                    withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
+                        sh "docker build --build-arg TMDB_V3_API_KEY=f204af711706e448c137300e98a0d6e3 -t ${imageTag} ."
+                        sh "docker tag ${imageTag} 6164118899/devsecops:${BRANCH_NAME}"
+                        sh "docker push 6164118899/devsecops:${BRANCH_NAME}"
+                    }
+                }
+            }
+        }
+        stage('Security Scan with Trivy') {
+            steps {
+                sh "trivy image 6164118899/devsecops:${BRANCH_NAME} > trivy-${BRANCH_NAME}.txt"
+            }
+        }
+        stage('Deploy Application') {
+            when {
+                branch 'main'
+            }
+            steps {
+                sh './jenkins/scripts/deploy-for-production.sh'
+            }
+        }
+        stage('Deploy to Staging') {
+            when {
+                branch 'staging'
+            }
+            steps {
+                sh './jenkins/scripts/deliver-for-development.sh'
+            }
+        }
+    }
+    post {
+        success {
+            echo "Pipeline for branch ${env.BRANCH_NAME} completed successfully."
+        }
+        failure {
+            echo "Pipeline for branch ${env.BRANCH_NAME} failed."
+        }
+    }
+}
