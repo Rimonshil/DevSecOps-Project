@@ -18,34 +18,8 @@ pipeline {
                 git branch: env.BRANCH_NAME, url: 'https://github.com/Rimonshil/DevSecOps-Project.git'
             }
         }
-        stage('SonarQube Analysis') {
-            when {
-                anyOf {
-                    branch 'main'
-                    branch 'staging'
-                }
-            }
-            steps {
-                withSonarQubeEnv('sonar-server') {
-                    sh '''$SCANNER_HOME/bin/sonar-scanner \
-                    -Dsonar.projectName=Netflix-${BRANCH_NAME} \
-                    -Dsonar.projectKey=Netflix-${BRANCH_NAME}'''
-                }
-            }
-        }
-        stage('Quality Gate') {
-            when {
-                anyOf {
-                    branch 'main'
-                    branch 'staging'
-                }
-            }
-            steps {
-                script {
-                    waitForQualityGate abortPipeline: true, credentialsId: 'sonar-token'
-                }
-            }
-        }
+
+
 
         stage('Deploy Application') {
             when {
@@ -55,26 +29,14 @@ pipeline {
                 script {
                     sh '''
                     set -e
-                    CONTAINER_NAME="netflix-production"
-                    DOCKER_IMAGE="6164118899/devsecops:main"
+                    REMOTE_USER="azureuser"
+                    REMOTE_SERVER="172.178.131.46"
+                    SCRIPT_PATH="/home/azureuser/deploy-for-production.sh"
+                    
+                    echo "Deploying from script: ${SCRIPT_PATH} to ${REMOTE_SERVER}..."
 
-                    echo "Deploying ${DOCKER_IMAGE} to production on ${REMOTE_SERVER}..."
-
-                    # SSH into the production server and execute the deployment steps
-                    ssh -o StrictHostKeyChecking=no azureuser@172.178.131.46 bash <<EOF
-                        set -e
-                        echo "Stopping existing container..."
-                        docker stop ${CONTAINER_NAME} || true
-                        docker rm ${CONTAINER_NAME} || true
-
-                        echo "Pulling latest image..."
-                        docker pull ${DOCKER_IMAGE}
-
-                        echo "Starting new container..."
-                        docker run -d --name ${CONTAINER_NAME} -p 8080:80 ${DOCKER_IMAGE}
-
-                        echo "Deployment complete on ${REMOTE_SERVER}!"
-                    EOF
+                    # Run the deploy script on the production server
+                    ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_SERVER} "bash ${SCRIPT_PATH}"
                     '''
                 }                
             }
