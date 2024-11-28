@@ -76,15 +76,13 @@ pipeline {
                 script {
                     sh '''
                     set -e
-                    REMOTE_USER="azureuser"
-                    REMOTE_SERVER="172.178.131.46"
                     CONTAINER_NAME="netflix-production"
                     DOCKER_IMAGE="6164118899/devsecops:main"
 
                     echo "Deploying ${DOCKER_IMAGE} to production on ${REMOTE_SERVER}..."
 
                     # SSH into the production server and execute the deployment steps
-                    ssh ${REMOTE_USER}@${REMOTE_SERVER} bash <<EOF
+                    ssh -o StrictHostKeyChecking=no azureuser@172.178.131.46 bash <<EOF
                         set -e
                         echo "Stopping existing container..."
                         docker stop ${CONTAINER_NAME} || true
