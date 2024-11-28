@@ -72,7 +72,7 @@ pipeline {
             when {
                 branch 'main'
             }
-            steps {
+            steps { 
                 script {
                     sh '''
                     set -e
@@ -99,6 +99,7 @@ pipeline {
                         echo "Deployment complete on ${REMOTE_SERVER}!"
                     EOF
                     '''
+                }                
             }
         }
         stage('Deploy to Staging') {
