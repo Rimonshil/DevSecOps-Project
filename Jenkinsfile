@@ -27,6 +27,7 @@ pipeline {
             }
             steps { 
                 script {
+                    sshagent(['prod-server']) {
                     sh '''
                     set -e
                     REMOTE_USER="azureuser"
@@ -41,6 +42,7 @@ pipeline {
                 }                
             }
         }
+    }     
         stage('Deploy to Staging') {
             when {
                 branch 'staging'
