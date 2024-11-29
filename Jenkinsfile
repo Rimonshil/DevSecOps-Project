@@ -96,7 +96,7 @@ pipeline {
                 branch 'staging'
             }
             steps {
-                sh './jenkins/scripts/deliver-for-development.sh'
+                sh 'docker run -d --name netflix -p 8081:80 6164118899/devsecops:staging'
             }
         }
     }
