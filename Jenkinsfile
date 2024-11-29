@@ -46,28 +46,8 @@ pipeline {
                 }
             }
         }
-        stage('Install Dependencies') {
-            steps {
-                sh "npm install"
-            }
-        }
-        stage('Build Docker Image') {
-            steps {
-                script {
-                    def imageTag = "netflix:${BRANCH_NAME}"
-                    withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
-                        sh "docker build --build-arg TMDB_V3_API_KEY=f204af711706e448c137300e98a0d6e3 -t ${imageTag} ."
-                        sh "docker tag ${imageTag} 6164118899/devsecops:${BRANCH_NAME}"
-                        sh "docker push 6164118899/devsecops:${BRANCH_NAME}"
-                    }
-                }
-            }
-        }
-        stage('Security Scan with Trivy') {
-            steps {
-                sh "trivy image 6164118899/devsecops:${BRANCH_NAME} > trivy-${BRANCH_NAME}.txt"
-            }
-        }
+
+
         stage('Deploy Application') {
             when {
                 branch 'main'
