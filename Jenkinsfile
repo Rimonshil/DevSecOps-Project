@@ -76,6 +76,8 @@ pipeline {
                 branch 'staging'
             }
             steps {
+                sh 'docker stop netflix'
+                sh 'docker rm netflix'
                 sh 'docker run -d --name netflix -p 8081:80 6164118899/devsecops:staging'
             }
         }
